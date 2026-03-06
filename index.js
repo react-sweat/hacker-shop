@@ -13,6 +13,14 @@ app.get('/', (_req, res) => {
   res.send('Hacker Shop API');
 });
 
+const cors = require('cors');
+
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+  }),
+);
+
 const productsRouter = require('./routes/products');
 app.use('/products', productsRouter);
 

@@ -24,6 +24,20 @@ app.use(
 const productsRouter = require('./routes/products');
 app.use('/products', productsRouter);
 
-app.listen(3000, () => {
+const authRouter = require('./routes/auth');
+app.use('/', authRouter);
+
+const purchasesRouter = require('./routes/purchases');
+app.use('/', purchasesRouter);
+
+const server = app.listen(3000, () => {
   console.log('Serwer działa na porcie 3000');
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error('ERROR: Port 3000 is already in use. Kill the other process or use a different port.');
+  } else {
+    console.error('Server error:', err);
+  }
 });

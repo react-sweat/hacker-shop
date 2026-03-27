@@ -2,17 +2,10 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { prisma } from '../lib/prisma.js';
 
 const router = Router();
 
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  password?: string;
-}
-
-const users: User[] = [];
 const JWT_SECRET = 'cyberpunk0hackershop0secret';
 
 router.post('/register', async (req: Request, res: Response) => {
@@ -29,26 +22,29 @@ router.post('/register', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Password is required and must be at least 8 characters long' });
     }
 
-    const usernameExists = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
+    const usernameExists = await prisma.user.findUnique({
+      where: { username: username.toLowerCase() }
+    });
     if (usernameExists) {
       return res.status(400).json({ message: 'Username already exists' });
     }
 
-    const emailExists = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    const emailExists = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
     if (emailExists) {
       return res.status(400).json({ message: 'Email already in use' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser: User = {
-      id: users.length + 1,
-      username: username.toLowerCase(),
-      email: email.toLowerCase(),
-      password: hashedPassword
-    };
-
-    users.push(newUser);
+    const newUser = await prisma.user.create({
+      data: {
+        username: username.toLowerCase(),
+        email: email.toLowerCase(),
+        password: hashedPassword
+      }
+    });
 
     const userResponse = {
       id: newUser.id,
@@ -74,9 +70,11 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Username and password are required' });
     }
 
-    const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
+    const user = await prisma.user.findUnique({
+      where: { username: username.toLowerCase() }
+    });
 
-    if (!user || !user.password) {
+    if (!user) {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
 

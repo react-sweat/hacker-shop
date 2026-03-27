@@ -25,7 +25,7 @@ router.post('/orders', authenticateToken, async (req: Request, res: Response) =>
         total,
         items: {
           create: items.map((item: any) => ({
-            productId: String(item.productId),
+            product: { connect: { id: Number(item.productId) } },
             name: item.name,
             quantity: item.quantity,
             price: item.price

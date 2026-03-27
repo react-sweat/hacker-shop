@@ -1,46 +1,46 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
+import { prisma } from '../lib/prisma.js';
 
 const router = Router();
 
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-}
-
-const products: Product[] = [
-  { id: 1, name: 'Laptop', price: 6000 },
-  { id: 2, name: 'Klawiatura', price: 500 },
-  { id: 3, name: 'Myszka', price: 199 }
-];
-
-router.get('/', (req: Request, res: Response) => {
-  res.json(products);
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const products = await prisma.product.findMany();
+    res.json(products);
+  } catch (error) {
+    console.error('Fetch products error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-router.post('/', (req: Request, res: Response) => {
-  console.log('BODY:', req.body);
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    console.log('BODY:', req.body);
 
-  const { name, price } = req.body || {};
+    const { name, price } = req.body || {};
 
-  if (
-    typeof name !== 'string' ||
-    !name.trim() ||
-    typeof price !== 'number' ||
-    price <= 0
-  ) {
-    return res.status(400).json({ error: 'Nieprawidłowe dane' });
+    if (
+      typeof name !== 'string' ||
+      !name.trim() ||
+      typeof price !== 'number' ||
+      price <= 0
+    ) {
+      return res.status(400).json({ error: 'Nieprawidłowe dane' });
+    }
+
+    const newProduct = await prisma.product.create({
+      data: {
+        name: name.trim(),
+        price
+      }
+    });
+
+    res.status(201).json(newProduct);
+  } catch (error) {
+    console.error('Product creation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-
-  const newProduct: Product = {
-    id: products.length + 1,
-    name: name.trim(),
-    price
-  };
-
-  products.push(newProduct);
-  res.status(201).json(newProduct);
 });
 
 export default router;

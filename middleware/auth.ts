@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = 'cyberpunk0hackershop0secret';
 
-// Use declaration merging to add 'user' to the Request type
 declare global {
   namespace Express {
     interface Request {

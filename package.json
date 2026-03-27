@@ -31,5 +31,8 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.5.0",
     "prisma": "^7.5.0"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

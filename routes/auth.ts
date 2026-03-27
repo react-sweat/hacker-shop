@@ -1,13 +1,21 @@
-const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+import { Router } from 'express';
+import type { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
-const router = express.Router();
+const router = Router();
 
-const users = [];
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  password?: string;
+}
+
+const users: User[] = [];
 const JWT_SECRET = 'cyberpunk0hackershop0secret';
 
-router.post('/register', async (req, res) => {
+router.post('/register', async (req: Request, res: Response) => {
   try {
     const { username, email, password } = req.body;
 
@@ -33,7 +41,7 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = {
+    const newUser: User = {
       id: users.length + 1,
       username: username.toLowerCase(),
       email: email.toLowerCase(),
@@ -58,7 +66,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
 
@@ -68,7 +76,7 @@ router.post('/login', async (req, res) => {
 
     const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
 
-    if (!user) {
+    if (!user || !user.password) {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
 
@@ -102,4 +110,4 @@ router.post('/login', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

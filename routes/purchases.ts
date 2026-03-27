@@ -1,10 +1,25 @@
-const express = require('express');
-const crypto = require('crypto');
-const authenticateToken = require('../middleware/auth');
+import { Router } from 'express';
+import type { Request, Response } from 'express';
+import crypto from 'crypto';
+import authenticateToken from '../middleware/auth.js';
 
-const router = express.Router();
+const router = Router();
 
-const ordersDB = {};
+interface PurchaseItem {
+  productId: number | string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+interface Purchase {
+  id: string;
+  date: string;
+  total: number;
+  items: PurchaseItem[];
+}
+
+const ordersDB: Record<number | string, Purchase[]> = {};
 
 function generateOrderId() {
   const num = Math.floor(1000 + Math.random() * 9000);
@@ -12,7 +27,7 @@ function generateOrderId() {
   return `T-${num}-${suffix}`;
 }
 
-router.post('/orders', authenticateToken, (req, res) => {
+router.post('/orders', authenticateToken, (req: Request, res: Response) => {
   try {
     const { items, total } = req.body;
 
@@ -27,11 +42,11 @@ router.post('/orders', authenticateToken, (req, res) => {
     const userId = req.user.id;
     const orderId = generateOrderId();
 
-    const order = {
+    const order: Purchase = {
       id: orderId,
       date: new Date().toISOString(),
       total,
-      items: items.map((item) => ({
+      items: items.map((item: any) => ({
         productId: item.productId,
         name: item.name,
         quantity: item.quantity,
@@ -43,7 +58,7 @@ router.post('/orders', authenticateToken, (req, res) => {
       ordersDB[userId] = [];
     }
 
-    ordersDB[userId].push(order);
+    ordersDB[userId]!.push(order);
 
     res.status(201).json({
       message: 'Order recorded successfully',
@@ -55,14 +70,13 @@ router.post('/orders', authenticateToken, (req, res) => {
   }
 });
 
-router.get('/purchases', authenticateToken, (req, res) => {
+router.get('/purchases', authenticateToken, (req: Request, res: Response) => {
   const userId = req.user.id;
   const userOrders = ordersDB[userId] || [];
 
-  // Sort by date, newest first
-  const sorted = [...userOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const sorted = [...userOrders].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   res.status(200).json(sorted);
 });
 
-module.exports = router;
+export default router;

@@ -1,17 +1,25 @@
-const express = require('express');
-const router = express.Router();
+import { Router } from 'express';
+import type { Request, Response } from 'express';
 
-const products = [
+const router = Router();
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+}
+
+const products: Product[] = [
   { id: 1, name: 'Laptop', price: 6000 },
   { id: 2, name: 'Klawiatura', price: 500 },
   { id: 3, name: 'Myszka', price: 199 }
 ];
 
-router.get('/', (req, res) => {
+router.get('/', (req: Request, res: Response) => {
   res.json(products);
 });
 
-router.post('/', (req, res) => {
+router.post('/', (req: Request, res: Response) => {
   console.log('BODY:', req.body);
 
   const { name, price } = req.body || {};
@@ -25,7 +33,7 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'Nieprawidłowe dane' });
   }
 
-  const newProduct = {
+  const newProduct: Product = {
     id: products.length + 1,
     name: name.trim(),
     price
@@ -35,4 +43,4 @@ router.post('/', (req, res) => {
   res.status(201).json(newProduct);
 });
 
-module.exports = router;
+export default router;

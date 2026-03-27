@@ -1,4 +1,9 @@
-const express = require('express');
+import express from 'express';
+import cors from 'cors';
+import productsRouter from './routes/products.js';
+import authRouter from './routes/auth.js';
+import purchasesRouter from './routes/purchases.js';
+
 const app = express();
 
 app.use(express.json());
@@ -13,28 +18,21 @@ app.get('/', (_req, res) => {
   res.send('Hacker Shop API');
 });
 
-const cors = require('cors');
-
 app.use(
   cors({
     origin: 'http://localhost:5173',
   }),
 );
 
-const productsRouter = require('./routes/products');
 app.use('/products', productsRouter);
-
-const authRouter = require('./routes/auth');
 app.use('/', authRouter);
-
-const purchasesRouter = require('./routes/purchases');
 app.use('/', purchasesRouter);
 
 const server = app.listen(3000, () => {
   console.log('Serwer działa na porcie 3000');
 });
 
-server.on('error', (err) => {
+server.on('error', (err: any) => {
   if (err.code === 'EADDRINUSE') {
     console.error('ERROR: Port 3000 is already in use. Kill the other process or use a different port.');
   } else {

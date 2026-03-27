@@ -36,7 +36,7 @@ temp/
 # Env / sekrety
 .env.local
 .env.*.local
-
+.env
 # IDE / edytory
 .vscode/
 .idea/
@@ -51,3 +51,5 @@ desktop.ini
 
 # Benchmarking (jeśli używasz)
 benchmarks/graphs
+
+/generated/prisma

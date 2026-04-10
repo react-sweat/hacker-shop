@@ -12,15 +12,14 @@ async function main() {
   console.log('Start seeding...')
   for (const p of products) {
     const product = await prisma.product.upsert({
-      where: { id: 0 }, // Dummy where for upsert if we don't have unique names yet, but we'll just use create or findOrCreate logic
+      where: { id: 0 },
       update: {},
       create: p,
     })
-    // Actually, since there's no unique constraint on name yet, let's just use create if they don't exist
-    // Or simpler for a seed script:
+
   }
   
-  // Re-writing to be safer:
+  
   for (const p of products) {
     const existing = await prisma.product.findFirst({
         where: { name: p.name }

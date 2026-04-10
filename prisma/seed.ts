@@ -1,39 +1,72 @@
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
+import { PrismaPg } from '@prisma/adapter-pg'
+import pg from 'pg'
+
+const connectionString = process.env.DATABASE_URL
+const pool = new pg.Pool({ connectionString })
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
+
 
 async function main() {
-  const products = [
-    { name: 'Laptop', price: 6000 },
-    { name: 'Klawiatura', price: 500 },
-    { name: 'Myszka', price: 199 }
+  console.log('Start seeding...')
+
+  // Create Categories (keeping feature but using simple ones)
+  const categories = [
+    { name: 'Computers' },
+    { name: 'Peripherals' }
   ]
 
-  console.log('Start seeding...')
-  for (const p of products) {
-    const product = await prisma.product.upsert({
-      where: { id: 0 },
+  for (const cat of categories) {
+    await prisma.category.upsert({
+      where: { name: cat.name },
       update: {},
-      create: p,
+      create: cat,
     })
-
   }
-  
-  
-  for (const p of products) {
-    const existing = await prisma.product.findFirst({
-        where: { name: p.name }
-    });
-    if (!existing) {
-        await prisma.product.create({ data: p });
-        console.log(`Created product: ${p.name}`);
-    } else {
-        console.log(`Product already exists: ${p.name}`);
+
+  const computers = await prisma.category.findUnique({ where: { name: 'Computers' } })
+  const peripherals = await prisma.category.findUnique({ where: { name: 'Peripherals' } })
+
+  const products = [
+    { 
+      name: 'Laptop', 
+      price: 6000, 
+      description: 'High-performance laptop', 
+      stock: 10,
+      categoryId: computers?.id ?? null
+    },
+    { 
+      name: 'Klawiatura', 
+      price: 500, 
+      description: 'Mechanical keyboard', 
+      stock: 25,
+      categoryId: peripherals?.id ?? null
+    },
+    { 
+      name: 'Myszka', 
+      price: 199, 
+      description: 'Wireless mouse', 
+      stock: 50,
+      categoryId: peripherals?.id ?? null
     }
+  ]
+
+  // Reset products first to ensure clean state
+  await prisma.orderItem.deleteMany()
+  await prisma.product.deleteMany()
+
+  for (const p of products) {
+    await prisma.product.create({
+      data: p
+    })
   }
 
   console.log('Seeding finished.')
 }
+
+
 
 main()
   .catch((e) => {

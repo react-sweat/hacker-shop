@@ -4,6 +4,7 @@ import cors from 'cors';
 import productsRouter from './routes/products.js';
 import authRouter from './routes/auth.js';
 import purchasesRouter from './routes/purchases.js';
+import adminRouter from './routes/admin.js';
 
 const app = express();
 
@@ -28,6 +29,8 @@ app.use(
 app.use('/products', productsRouter);
 app.use('/', authRouter);
 app.use('/', purchasesRouter);
+app.use('/admin', adminRouter);
+
 
 const server = app.listen(3000, () => {
   console.log('Serwer działa na porcie 3000');

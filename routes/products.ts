@@ -6,13 +6,16 @@ const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const products = await prisma.product.findMany();
+    const products = await prisma.product.findMany({
+      include: { category: true }
+    });
     res.json(products);
   } catch (error) {
     console.error('Fetch products error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 router.post('/', async (req: Request, res: Response) => {
   try {

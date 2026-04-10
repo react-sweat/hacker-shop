@@ -42,14 +42,16 @@ router.post('/register', async (req: Request, res: Response) => {
       data: {
         username: username.toLowerCase(),
         email: email.toLowerCase(),
-        password: hashedPassword
+        password: hashedPassword,
+        role: (await prisma.user.count()) === 0 ? 'ADMIN' : 'USER'
       }
     });
 
     const userResponse = {
       id: newUser.id,
       username: newUser.username,
-      email: newUser.email
+      email: newUser.email,
+      role: newUser.role
     };
 
     res.status(201).json({
@@ -86,7 +88,8 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const payload = {
       id: user.id,
-      username: user.username
+      username: user.username,
+      role: user.role
     };
 
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
@@ -94,7 +97,8 @@ router.post('/login', async (req: Request, res: Response) => {
     const userResponse = {
       id: user.id,
       username: user.username,
-      email: user.email
+      email: user.email,
+      role: user.role
     };
 
     res.status(200).json({

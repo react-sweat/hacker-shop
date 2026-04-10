@@ -7,36 +7,106 @@ const router = Router();
 
 router.post('/orders', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { items, total } = req.body;
+    const { items } = req.body;
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: 'Order must contain at least one item' });
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: 'ORDER_MUST_CONTAIN_AT_LEAST_ONE_ITEM' });
     }
 
-    if (total === undefined || typeof total !== 'number' || total <= 0) {
-      return res.status(400).json({ message: 'A valid total is required' });
+    const normalizedItems = items
+      .map((it: any) => ({
+        productId: Number(it?.productId),
+        quantity: Number(it?.quantity),
+      }))
+      .filter((it) => Number.isFinite(it.productId) && it.productId > 0 && Number.isFinite(it.quantity) && it.quantity > 0);
+
+    if (normalizedItems.length !== items.length) {
+      return res.status(400).json({ message: 'INVALID_ORDER_ITEMS' });
     }
+
+    // Merge duplicate productIds (cart can contain same product multiple times)
+    const mergedByProduct = new Map<number, number>();
+    for (const it of normalizedItems) {
+      mergedByProduct.set(it.productId, (mergedByProduct.get(it.productId) ?? 0) + it.quantity);
+    }
+    const mergedItems = Array.from(mergedByProduct.entries()).map(([productId, quantity]) => ({ productId, quantity }));
 
     const userId = req.user.id;
 
-    const order = await prisma.order.create({
-      data: {
-        userId,
-        total,
-        items: {
-          create: items.map((item: any) => ({
-            product: { connect: { id: Number(item.productId) } },
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price
-          }))
+    const result = await prisma.$transaction(async (tx) => {
+      const products = await tx.product.findMany({
+        where: { id: { in: mergedItems.map((i) => i.productId) } },
+        select: { id: true, name: true, price: true, stock: true },
+      });
+
+      if (products.length !== mergedItems.length) {
+        return { ok: false as const, status: 400 as const, body: { message: 'UNKNOWN_PRODUCT_IN_ORDER' } };
+      }
+
+      const byId = new Map(products.map((p) => [p.id, p]));
+
+      // Decrement stock with a conditional update to avoid overselling under concurrency.
+      for (const it of mergedItems) {
+        const p = byId.get(it.productId)!;
+        if (p.stock < it.quantity) {
+          return {
+            ok: false as const,
+            status: 409 as const,
+            body: { message: 'INSUFFICIENT_STOCK', productId: p.id, available: p.stock, requested: it.quantity },
+          };
+        }
+
+        const updated = await tx.product.updateMany({
+          where: { id: p.id, stock: { gte: it.quantity } },
+          data: { stock: { decrement: it.quantity } },
+        });
+
+        if (updated.count !== 1) {
+          // Another transaction likely bought the last units first.
+          const fresh = await tx.product.findUnique({ where: { id: p.id }, select: { stock: true } });
+          return {
+            ok: false as const,
+            status: 409 as const,
+            body: { message: 'INSUFFICIENT_STOCK', productId: p.id, available: fresh?.stock ?? 0, requested: it.quantity },
+          };
         }
       }
+
+      const computedTotal = mergedItems.reduce((sum, it) => {
+        const p = byId.get(it.productId)!;
+        return sum + p.price * it.quantity;
+      }, 0);
+
+      const order = await tx.order.create({
+        data: {
+          userId,
+          total: computedTotal,
+          items: {
+            create: mergedItems.map((it) => {
+              const p = byId.get(it.productId)!;
+              return {
+                product: { connect: { id: p.id } },
+                name: p.name,
+                quantity: it.quantity,
+                price: p.price,
+              };
+            }),
+          },
+        },
+        select: { id: true, total: true },
+      });
+
+      return { ok: true as const, order };
     });
 
+    if (!result.ok) {
+      return res.status(result.status).json(result.body);
+    }
+
     res.status(201).json({
-      message: 'Order recorded successfully',
-      orderId: order.id
+      message: 'ORDER_RECORDED_SUCCESSFULLY',
+      orderId: result.order.id,
+      total: result.order.total,
     });
   } catch (error) {
     console.error('Order creation error:', error);

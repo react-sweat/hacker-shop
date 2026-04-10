@@ -5,6 +5,10 @@ import { prisma } from '../lib/prisma.js';
 
 const router = Router();
 
+const isUuid = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
 router.post('/orders', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { items } = req.body;
@@ -15,17 +19,16 @@ router.post('/orders', authenticateToken, async (req: Request, res: Response) =>
 
     const normalizedItems = items
       .map((it: any) => ({
-        productId: Number(it?.productId),
+        productId: String(it?.productId ?? ''),
         quantity: Number(it?.quantity),
       }))
-      .filter((it) => Number.isFinite(it.productId) && it.productId > 0 && Number.isFinite(it.quantity) && it.quantity > 0);
+      .filter((it) => isUuid(it.productId) && Number.isFinite(it.quantity) && it.quantity > 0);
 
     if (normalizedItems.length !== items.length) {
       return res.status(400).json({ message: 'INVALID_ORDER_ITEMS' });
     }
 
-    // Merge duplicate productIds (cart can contain same product multiple times)
-    const mergedByProduct = new Map<number, number>();
+    const mergedByProduct = new Map<string, number>();
     for (const it of normalizedItems) {
       mergedByProduct.set(it.productId, (mergedByProduct.get(it.productId) ?? 0) + it.quantity);
     }
@@ -45,7 +48,7 @@ router.post('/orders', authenticateToken, async (req: Request, res: Response) =>
 
       const byId = new Map(products.map((p) => [p.id, p]));
 
-      // Decrement stock with a conditional update to avoid overselling under concurrency.
+      
       for (const it of mergedItems) {
         const p = byId.get(it.productId)!;
         if (p.stock < it.quantity) {
@@ -62,7 +65,6 @@ router.post('/orders', authenticateToken, async (req: Request, res: Response) =>
         });
 
         if (updated.count !== 1) {
-          // Another transaction likely bought the last units first.
           const fresh = await tx.product.findUnique({ where: { id: p.id }, select: { stock: true } });
           return {
             ok: false as const,

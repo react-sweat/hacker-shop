@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
+import bcrypt from 'bcryptjs'
 
 const connectionString = process.env.DATABASE_URL
 const pool = new pg.Pool({ connectionString })
@@ -12,7 +13,27 @@ const prisma = new PrismaClient({ adapter })
 async function main() {
   console.log('Start seeding...')
 
-  // Create Categories (keeping feature but using simple ones)
+  const adminUsername = 'admin'
+  const adminEmail = 'admin@hacker-shop.local'
+  const adminPlainPassword = 'password67'
+  const adminHashedPassword = await bcrypt.hash(adminPlainPassword, 10)
+
+  await prisma.user.upsert({
+    where: { username: adminUsername },
+    update: {
+      email: adminEmail,
+      password: adminHashedPassword,
+      role: 'ADMIN',
+    },
+    create: {
+      username: adminUsername,
+      email: adminEmail,
+      password: adminHashedPassword,
+      role: 'ADMIN',
+    },
+  })
+  
+  
   const categories = [
     { name: 'Computers' },
     { name: 'Peripherals' }
@@ -53,7 +74,7 @@ async function main() {
     }
   ]
 
-  // Reset products first to ensure clean state
+  
   await prisma.orderItem.deleteMany()
   await prisma.product.deleteMany()
 

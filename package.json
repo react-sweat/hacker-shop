@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx watch index.ts"
+    "dev": "call \"%npm_node_execpath%\" ./node_modules/tsx/dist/cli.mjs watch index.ts"
   },
   "keywords": [],
   "author": "",
@@ -33,6 +33,6 @@
     "prisma": "^7.7.0"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "call \"%npm_node_execpath%\" ./node_modules/tsx/dist/cli.mjs prisma/seed.ts"
   }
 }

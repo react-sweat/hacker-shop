@@ -6,11 +6,13 @@ import isAdmin from '../middleware/isAdmin.js';
 
 const router = Router();
 
-// Apply admin protection to all routes in this router
+const isUuid = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
 router.use(authenticateToken);
 router.use(isAdmin);
 
-// --- CATEGORIES ---
 
 router.get('/categories', async (_req: Request, res: Response) => {
   try {
@@ -39,8 +41,9 @@ router.put('/categories/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name } = req.body;
+    if (!isUuid(id)) return res.status(400).json({ error: 'INVALID_ID' });
     const category = await prisma.category.update({
-      where: { id: Number(id) },
+      where: { id },
       data: { name }
     });
     res.json(category);
@@ -52,8 +55,9 @@ router.put('/categories/:id', async (req: Request, res: Response) => {
 router.delete('/categories/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!isUuid(id)) return res.status(400).json({ error: 'INVALID_ID' });
     await prisma.category.delete({
-      where: { id: Number(id) }
+      where: { id }
     });
     res.status(204).send();
   } catch (error) {
@@ -61,7 +65,6 @@ router.delete('/categories/:id', async (req: Request, res: Response) => {
   }
 });
 
-// --- PRODUCTS ---
 
 router.get('/products', async (_req: Request, res: Response) => {
   try {
@@ -84,7 +87,7 @@ router.post('/products', async (req: Request, res: Response) => {
         description,
         imageUrl,
         stock: Number(stock),
-        categoryId: categoryId ? Number(categoryId) : null
+        categoryId: categoryId ? String(categoryId) : null
       }
     });
     res.status(201).json(product);
@@ -97,6 +100,7 @@ router.put('/products/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, price, description, imageUrl, stock, categoryId } = req.body;
+    if (!isUuid(id)) return res.status(400).json({ error: 'INVALID_ID' });
 
     const data: any = {};
     if (name !== undefined) data.name = name;
@@ -104,10 +108,10 @@ router.put('/products/:id', async (req: Request, res: Response) => {
     if (description !== undefined) data.description = description;
     if (imageUrl !== undefined) data.imageUrl = imageUrl;
     if (stock !== undefined) data.stock = Number(stock);
-    if (categoryId !== undefined) data.categoryId = categoryId ? Number(categoryId) : null;
+    if (categoryId !== undefined) data.categoryId = categoryId ? String(categoryId) : null;
 
     const product = await prisma.product.update({
-      where: { id: Number(id) },
+      where: { id },
       data
     });
     res.json(product);
@@ -119,8 +123,9 @@ router.put('/products/:id', async (req: Request, res: Response) => {
 router.delete('/products/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!isUuid(id)) return res.status(400).json({ error: 'INVALID_ID' });
     await prisma.product.delete({
-      where: { id: Number(id) }
+      where: { id }
     });
     res.status(204).send();
   } catch (error) {
@@ -128,7 +133,6 @@ router.delete('/products/:id', async (req: Request, res: Response) => {
   }
 });
 
-// --- REPORTS ---
 
 router.get('/reports/orders', async (_req: Request, res: Response) => {
   try {

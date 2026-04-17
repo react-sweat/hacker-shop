@@ -65,7 +65,6 @@ router.delete('/categories/:id', async (req: Request, res: Response) => {
   }
 });
 
-
 router.get('/products', async (_req: Request, res: Response) => {
   try {
     const products = await prisma.product.findMany({
@@ -86,7 +85,7 @@ router.post('/products', async (req: Request, res: Response) => {
         price: Number(price),
         description,
         imageUrl,
-        stock: Number(stock),
+        stock: Number(stock || 0),
         categoryId: categoryId ? String(categoryId) : null
       }
     });
@@ -133,6 +132,74 @@ router.delete('/products/:id', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/inventory', async (_req: Request, res: Response) => {
+  try {
+    const inventory = await prisma.product.findMany({
+      select: {
+        id: true,
+        name: true,
+        stock: true,
+        category: { select: { name: true } }
+      }
+    });
+    res.json(inventory);
+  } catch (error) {
+    res.status(500).json({ error: 'FAILED_TO_FETCH_INVENTORY' });
+  }
+});
+
+router.put('/inventory/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { stock } = req.body;
+    if (!isUuid(id)) return res.status(400).json({ error: 'INVALID_ID' });
+    if (stock === undefined) return res.status(400).json({ error: 'STOCK_REQUIRED' });
+
+    const product = await prisma.product.update({
+      where: { id },
+      data: { stock: Number(stock) },
+      select: { id: true, name: true, stock: true }
+    });
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ error: 'FAILED_TO_UPDATE_INVENTORY' });
+  }
+});
+
+router.get('/orders', async (_req: Request, res: Response) => {
+  try {
+    const orders = await prisma.order.findMany({
+      include: {
+        user: { select: { username: true, email: true } },
+        items: true
+      },
+      orderBy: { date: 'desc' }
+    });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ error: 'FAILED_TO_FETCH_ORDERS' });
+  }
+});
+
+router.get('/orders/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!isUuid(id)) return res.status(400).json({ error: 'INVALID_ID' });
+
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        user: { select: { username: true, email: true } },
+        items: true
+      }
+    });
+
+    if (!order) return res.status(404).json({ error: 'ORDER_NOT_FOUND' });
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ error: 'FAILED_TO_FETCH_ORDER_DETAILS' });
+  }
+});
 
 router.get('/reports/orders', async (_req: Request, res: Response) => {
   try {

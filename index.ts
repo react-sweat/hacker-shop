@@ -5,6 +5,8 @@ import productsRouter from './routes/products.js';
 import authRouter from './routes/auth.js';
 import purchasesRouter from './routes/purchases.js';
 import adminRouter from './routes/admin.js';
+import chatRouter from './routes/chat.js';
+
 
 const app = express();
 
@@ -30,6 +32,7 @@ app.use('/products', productsRouter);
 app.use('/', authRouter);
 app.use('/', purchasesRouter);
 app.use('/admin', adminRouter);
+app.use('/chat', chatRouter);
 
 
 const server = app.listen(3000, () => {

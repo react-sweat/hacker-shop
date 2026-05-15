@@ -166,7 +166,7 @@ export async function chat(userMessage: string, sessionId?: string): Promise<{
     const completion = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: 'google/gemini-3.1-pro-preview',
+        model: 'deepseek/deepseek-v4-flash:free',
         messages: session.history,
         tools: TOOLS,
         tool_choice: "auto",
